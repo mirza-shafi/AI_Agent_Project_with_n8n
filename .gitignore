@@ -14,3 +14,8 @@ frontend/dist/
 
 # OS
 .DS_Store
+
+# Local-only folders (kept out of GitHub)
+n8n/
+docs/
+

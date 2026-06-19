@@ -46,7 +46,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -69,7 +69,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -114,13 +114,13 @@
             {
               "id": "a4",
               "name": "summary",
-              "value": "={{ $('Gemini Summary').first().json.candidates[0].content.parts[0].text }}",
+              "value": "={{ $('Gemini Summary').first().json.candidates[0].content.parts.filter(p => !p.thought).map(p => p.text).join('\\n').trim() }}",
               "type": "string"
             },
             {
               "id": "a5",
               "name": "insights",
-              "value": "={{ $json.candidates[0].content.parts[0].text }}",
+              "value": "={{ $json.candidates[0].content.parts.filter(p => !p.thought).map(p => p.text).join('\\n').trim() }}",
               "type": "string"
             },
             {

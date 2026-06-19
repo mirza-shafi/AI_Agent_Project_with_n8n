@@ -110,7 +110,7 @@ Only do this if you want to learn how it's built or the import failed. Otherwise
 - Add node → **HTTP Request**.
 - Settings:
   - **Method:** `POST`
-  - **URL:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
+  - **URL:** `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent`
   - **Authentication:** `Generic Credential Type` → **Header Auth** (you create this credential in Section 4).
   - **Send Body:** ON → **Body Content Type:** `JSON` → **Specify Body:** `Using JSON` →
     set the JSON field to **expression** mode and paste:
@@ -133,8 +133,13 @@ Only do this if you want to learn how it's built or the import failed. Otherwise
   | session_id   | `{{ $('Clean Text').first().json.session_id }}` |
   | email        | `{{ $('Clean Text').first().json.email }}` |
   | article_url  | `{{ $('Clean Text').first().json.article_url }}` |
-  | summary      | `{{ $('Gemini Summary').first().json.candidates[0].content.parts[0].text }}` |
-  | insights     | `{{ $json.candidates[0].content.parts[0].text }}` |
+  | summary      | `{{ $('Gemini Summary').first().json.candidates[0].content.parts.filter(p => !p.thought).map(p => p.text).join('\n').trim() }}` |
+  | insights     | `{{ $json.candidates[0].content.parts.filter(p => !p.thought).map(p => p.text).join('\n').trim() }}` |
+
+  > Note: `gemma-4-31b-it` is a **thinking** model — its response includes an extra
+  > `parts[]` entry marked `"thought": true` (its reasoning). The `.filter(p => !p.thought)`
+  > above drops the reasoning and keeps only the real answer. (This also works fine for
+  > non-thinking models, which simply have one part.)
   | timestamp    | `{{ $now.toISO() }}` |
 
 ### Node 7 — Append to Google Sheets
@@ -251,7 +256,7 @@ http://localhost:5173, enter your email + an article URL, and submit.
 |---|---|
 | Webhook returns 404 | Workflow is not **Active**, or you used the Test URL without clicking "Listen". |
 | Gemini node 400/403 | Wrong header name (must be `x-goog-api-key`) or invalid/expired API key. |
-| Gemini node 404 model | Model name changed — try `gemini-1.5-flash` instead of `gemini-2.0-flash` in the URL. |
+| Gemini node 404 model | Model name not found for your key — list available models (see below) and put a valid one in the URL, e.g. `gemma-3-27b-it` or `gemini-2.0-flash`. |
 | Sheets node error | The header row names must match exactly: `Session ID, Article URL, Summary, Insights, Email, Timestamp`. Re-select Document/Sheet. |
 | Gmail "insufficient scope" | Re-create the Gmail credential and make sure the Gmail API is enabled in Google Cloud. |
 | Empty summary | The page blocked scraping. Try a simpler article URL (e.g. a Wikipedia page). |

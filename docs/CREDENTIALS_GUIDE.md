@@ -30,11 +30,20 @@ This is the easiest one — no billing required for the free tier.
 
 **Verify the key works** (optional, from a terminal):
 ```bash
-curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" \
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent" \
   -H "x-goog-api-key: YOUR_KEY" -H "Content-Type: application/json" \
   -d '{"contents":[{"parts":[{"text":"Say hello"}]}]}'
 ```
 A JSON reply with `candidates` means the key is good.
+
+**If you get a 404 "model not found"**, the model name is wrong for your key. List the
+models your key can actually use, then copy the exact `name` into the node URLs:
+```bash
+curl "https://generativelanguage.googleapis.com/v1beta/models" -H "x-goog-api-key: YOUR_KEY"
+```
+> Note: Gemma models (e.g. `gemma-4-31b-it`) are served through the same `generateContent`
+> endpoint and our minimal `contents/parts` body works for them. Gemma does **not** support
+> a system prompt or `generationConfig` extras, but this workflow doesn't use those.
 
 ---
 

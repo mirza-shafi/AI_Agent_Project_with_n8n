@@ -1,65 +1,67 @@
-# AI Article Agent (React + FastAPI + n8n + Gemini)
+# AI Article Agent
 
-A mini AI workflow system. A user submits an **email** and an **article URL**.
-The system scrapes the article, uses **Google Gemini** to summarize it and extract
-key insights, saves everything to **Google Sheets**, and **emails** the result back.
+A mini AI workflow system. A user submits an **email** and an **article URL** through a
+React UI. A FastAPI backend forwards the request to an **n8n** workflow, which scrapes the
+article, uses **Google Gemini** to summarize it and extract key insights, logs everything
+to **Google Sheets**, and **emails** the result back to the user.
 
 ```
-React (frontend)  ──POST /process──►  FastAPI (backend)  ──webhook──►  n8n workflow
-  email + URL                          + session_id                     │
-                                                                        ├─ Scrape article (HTTP)
-                                                                        ├─ Gemini: summary
-                                                                        ├─ Gemini: insights
-                                                                        ├─ Append to Google Sheets
-                                                                        └─ Send email (Gmail)
+┌──────────────┐   POST /process    ┌──────────────┐   webhook    ┌────────────────────────┐
+│   React UI   │ ─────────────────► │   FastAPI    │ ───────────► │   n8n workflow         │
+│ email + URL  │  { email, url }    │   backend    │ { email,url, │                        │
+│              │ ◄───────────────── │ + session_id │   session_id}│  Scrape (HTTP)         │
+└──────────────┘  { session_id }    └──────────────┘              │  → Gemini summary      │
+                                                                   │  → Gemini insights     │
+                                                                   │  → Google Sheets       │
+                                                                   │  → Gmail               │
+                                                                   └────────────────────────┘
 ```
+
+## Tech stack
+
+- **Frontend:** React + Vite (modern, responsive UI)
+- **Backend:** FastAPI (Python) — generates a session id and forwards to n8n
+- **Automation:** n8n (self-hosted)
+- **AI:** Google Gemini API (`gemma-4-31b-it`)
+- **Storage / delivery:** Google Sheets + Gmail
 
 ## Repository layout
 
 ```
-AI_Agent_Project_with_n8n/
-├── backend/            FastAPI app (generates session_id, forwards to n8n)
-│   ├── main.py
+.
+├── backend/            FastAPI app
+│   ├── main.py             /process + /health, forwards to n8n
 │   ├── requirements.txt
-│   └── .env.example
-├── frontend/           React + Vite UI (email + URL form)
-│   ├── src/App.jsx
-│   └── .env.example
-├── n8n/
-│   └── workflow.json       Import this into your n8n instance
-└── docs/
-    ├── N8N_GUIDE.md          ★ Step-by-step n8n guide (start here if new to n8n)
-    └── CREDENTIALS_GUIDE.md  ★ How to get every API key / credential
+│   └── .env.example        N8N_WEBHOOK_URL
+└── frontend/           React + Vite UI
+    ├── src/App.jsx         email + URL form
+    ├── src/App.css
+    └── .env.example        VITE_API_URL
 ```
 
-## Quick start (run order)
+> The n8n workflow and setup notes are kept outside this repository.
 
-> Recommended order: **1) n8n** → **2) backend** → **3) frontend**.
-> You need n8n running first so the backend has a webhook URL to point to.
-> Your instance is already live at **https://n8n.mirzashafi.com**.
+## Getting started
 
-### 1. Import the workflow into your n8n instance
-Full beginner walkthrough: **[docs/N8N_GUIDE.md](docs/N8N_GUIDE.md)**.
-All API keys / credentials: **[docs/CREDENTIALS_GUIDE.md](docs/CREDENTIALS_GUIDE.md)**.
+You need a running n8n instance with the workflow imported and **active**, then start the
+backend and frontend locally.
 
-n8n is already deployed at **https://n8n.mirzashafi.com**. Log in, then:
-import `n8n/workflow.json`, attach credentials (Gemini, Google Sheets, Gmail),
-and **Activate** the workflow. Copy the **Production webhook URL** from the Webhook node
-(`https://n8n.mirzashafi.com/webhook/article-agent`).
+### 1. Backend (FastAPI)
 
-### 2. Start the backend
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# edit .env -> set N8N_WEBHOOK_URL to the Production webhook URL from n8n
+# set N8N_WEBHOOK_URL to your n8n production webhook URL
 uvicorn main:app --reload --port 8000
 ```
-Check: open http://localhost:8000/health → `{"status":"ok"}`.
 
-### 3. Start the frontend
+Health check: open http://localhost:8000/health → `{"status":"ok"}`.
+
+### 2. Frontend (React)
+
 ```bash
 cd frontend
 npm install
@@ -68,30 +70,23 @@ npm run dev
 # open http://localhost:5173
 ```
 
-## How the data flows
+## How it works
 
-1. **Frontend** collects `email` + `article_url`, POSTs to the backend `/process`.
-2. **Backend** generates a `session_id` (UUID), forwards `{ email, article_url, session_id }`
-   to the n8n **Production webhook** URL, and returns the `session_id` to the UI.
-3. **n8n** scrapes the article, runs two Gemini calls (summary + insights),
-   appends a row to Google Sheets, and emails the user.
+1. The **frontend** collects an `email` + `article_url` and POSTs them to the backend.
+2. The **backend** generates a UUID `session_id`, forwards
+   `{ email, article_url, session_id }` to the n8n webhook, and returns the `session_id`.
+3. **n8n** scrapes the page, runs two Gemini calls (summary + insights), appends a row to
+   Google Sheets, and emails the user their summary and key insights.
 
-## Endpoints (backend)
+## API (backend)
 
-| Method | Path       | Body                              | Returns |
-|--------|------------|-----------------------------------|---------|
-| GET    | `/health`  | –                                 | `{ "status": "ok" }` |
-| POST   | `/process` | `{ "email", "article_url" }`      | `{ "session_id", "status", "n8n_status" }` |
+| Method | Path       | Body                          | Returns |
+|--------|------------|-------------------------------|---------|
+| GET    | `/health`  | –                             | `{ "status": "ok" }` |
+| POST   | `/process` | `{ "email", "article_url" }`  | `{ "session_id", "status", "n8n_status" }` |
 
-## Security notes
-- The backend uses permissive CORS for local dev — restrict origins before deploying.
-- Your n8n instance is public (https://n8n.mirzashafi.com) — protect the editor with a strong login and keep the workflow's secrets in n8n credentials.
-- Never commit real `.env` files or API keys. Only `.env.example` files are tracked.
-- The n8n webhook is unauthenticated by default. For anything beyond local testing,
-  add a header-auth credential to the Webhook node and send it from the backend.
+## Notes
 
-## Google Sheet columns
-Create a sheet with these header columns in **row 1** (exact names):
-```
-Session ID | Article URL | Summary | Insights | Email | Timestamp
-```
+- The backend uses permissive CORS for local development — restrict origins before deploying.
+- Never commit real `.env` files or API keys; only `.env.example` files are tracked.
+- Secrets (Gemini key, Google/Gmail credentials) live in the n8n credential store, not in code.

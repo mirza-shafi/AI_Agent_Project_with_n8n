@@ -19,33 +19,18 @@ the user.
 
 ---
 
-## 1. Get n8n running
+## 1. Open your n8n instance
 
-You have two options. **Option A (n8n Cloud)** is the easiest if you don't want to install
-anything. **Option B (Docker)** runs it on your own machine and is what this repo is set up for.
+Your n8n is already deployed at **https://n8n.mirzashafi.com** — there's nothing to install.
 
-### Option A — n8n Cloud (no install)
-1. Go to **https://n8n.io** and click **Get started / Sign up**.
-2. Create a free trial account. You'll land on a URL like `https://yourname.app.n8n.cloud`.
-3. That web page **is** your n8n editor. Skip to **Section 2**.
-
-### Option B — Self-hosted with Docker (recommended for this repo)
-1. Install **Docker Desktop**: https://www.docker.com/products/docker-desktop/ and open it
-   (wait until it says "Docker Desktop is running").
-2. In a terminal:
-   ```bash
-   cd n8n
-   docker compose up -d
-   ```
-3. Wait ~30 seconds, then open **http://localhost:5678** in your browser.
-4. A login box appears. Use the credentials from `docker-compose.yml`:
-   - **User:** `admin`
-   - **Password:** `changeme`
-5. The first time, n8n may ask you to create an **owner account** (email + password). This
-   is just a local login — use anything you'll remember.
+1. Open **https://n8n.mirzashafi.com** in your browser.
+2. Log in with your n8n account (the owner/admin login you set when you deployed it).
 
 You should now see the n8n editor: a mostly-empty canvas with a big **"+"** or
 **"Add first step"** in the middle, and a left sidebar with **Overview / Workflows / Credentials**.
+
+> Keep this editor protected with a strong login — the instance is reachable from the
+> public internet.
 
 ---
 
@@ -270,7 +255,7 @@ http://localhost:5173, enter your email + an article URL, and submit.
 | Sheets node error | The header row names must match exactly: `Session ID, Article URL, Summary, Insights, Email, Timestamp`. Re-select Document/Sheet. |
 | Gmail "insufficient scope" | Re-create the Gmail credential and make sure the Gmail API is enabled in Google Cloud. |
 | Empty summary | The page blocked scraping. Try a simpler article URL (e.g. a Wikipedia page). |
-| Code node disabled | On Docker, ensure `NODE_FUNCTION_ALLOW_BUILTIN=*` is set (already in our compose file). |
+| Code node disabled | Your n8n instance must allow the Code node. If it's blocked, set the env var `NODE_FUNCTION_ALLOW_BUILTIN=*` on the server and restart n8n. |
 
 ---
 

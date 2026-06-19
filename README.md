@@ -26,8 +26,7 @@ AI_Agent_Project_with_n8n/
 │   ├── src/App.jsx
 │   └── .env.example
 ├── n8n/
-│   ├── workflow.json       Import this into n8n
-│   └── docker-compose.yml  Run n8n locally
+│   └── workflow.json       Import this into your n8n instance
 └── docs/
     ├── N8N_GUIDE.md          ★ Step-by-step n8n guide (start here if new to n8n)
     └── CREDENTIALS_GUIDE.md  ★ How to get every API key / credential
@@ -37,19 +36,16 @@ AI_Agent_Project_with_n8n/
 
 > Recommended order: **1) n8n** → **2) backend** → **3) frontend**.
 > You need n8n running first so the backend has a webhook URL to point to.
+> Your instance is already live at **https://n8n.mirzashafi.com**.
 
-### 1. Start n8n and import the workflow
+### 1. Import the workflow into your n8n instance
 Full beginner walkthrough: **[docs/N8N_GUIDE.md](docs/N8N_GUIDE.md)**.
 All API keys / credentials: **[docs/CREDENTIALS_GUIDE.md](docs/CREDENTIALS_GUIDE.md)**.
 
-Short version (self-hosted via Docker):
-```bash
-cd n8n
-docker compose up -d
-# open http://localhost:5678  (user: admin / pass: changeme)
-```
-Then import `n8n/workflow.json`, attach credentials (Gemini, Google Sheets, Gmail),
-and **Activate** the workflow. Copy the **Production webhook URL** from the Webhook node.
+n8n is already deployed at **https://n8n.mirzashafi.com**. Log in, then:
+import `n8n/workflow.json`, attach credentials (Gemini, Google Sheets, Gmail),
+and **Activate** the workflow. Copy the **Production webhook URL** from the Webhook node
+(`https://n8n.mirzashafi.com/webhook/article-agent`).
 
 ### 2. Start the backend
 ```bash
@@ -89,7 +85,7 @@ npm run dev
 
 ## Security notes
 - The backend uses permissive CORS for local dev — restrict origins before deploying.
-- The n8n Docker setup uses basic auth `admin/changeme` — change it in `docker-compose.yml`.
+- Your n8n instance is public (https://n8n.mirzashafi.com) — protect the editor with a strong login and keep the workflow's secrets in n8n credentials.
 - Never commit real `.env` files or API keys. Only `.env.example` files are tracked.
 - The n8n webhook is unauthenticated by default. For anything beyond local testing,
   add a header-auth credential to the Webhook node and send it from the backend.

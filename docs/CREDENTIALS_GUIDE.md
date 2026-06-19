@@ -68,9 +68,8 @@ Both Google nodes use **OAuth2**. Do these steps once.
 4. Under **Authorized redirect URIs → + Add URI**, paste the redirect URL that **n8n shows you**.
    - To find it: in n8n, open the **Append to Google Sheets** node → Credential dropdown →
      **+ Create New Credential** (Google Sheets OAuth2 API). n8n displays an
-     **OAuth Redirect URL** — copy it. For your deployment it will be:
-     - **Your instance:** `https://n8n.mirzashafi.com/rest/oauth2-credential/callback`
-     - (local Docker would be `http://localhost:5678/rest/oauth2-credential/callback`)
+     **OAuth Redirect URL** — copy it. For your deployment it is:
+     `https://n8n.mirzashafi.com/rest/oauth2-credential/callback`
 5. Click **Create**. A dialog shows your **Client ID** and **Client Secret** — copy both.
 
 ### Step E — Put it into n8n (Sheets)

@@ -1,0 +1,30 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      # Map to a port your reverse proxy (nginx / Caddy / Traefik) forwards
+      # n8n.mirzashafi.com -> here. Keep 5678 internal.
+      - "5678:5678"
+    environment:
+      # Basic auth for the n8n editor UI (change these!)
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme
+      # Public host / HTTPS settings (terminate TLS at your reverse proxy)
+      - N8N_HOST=n8n.mirzashafi.com
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.mirzashafi.com/
+      - N8N_EDITOR_BASE_URL=https://n8n.mirzashafi.com/
+      # Tell n8n it sits behind a trusted proxy (correct redirect URLs / cookies)
+      - N8N_PROXY_HOPS=1
+      - GENERIC_TIMEZONE=Asia/Dhaka
+      # Allow the Code node to run
+      - NODE_FUNCTION_ALLOW_BUILTIN=*
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:

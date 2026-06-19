@@ -1,0 +1,247 @@
+{
+  "name": "AI Article Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "article-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-160, 300],
+      "webhookId": "article-agent"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.article_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "node-scrape",
+      "name": "Scrape Article",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [60, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pull the original payload that FastAPI sent to the webhook\nconst wh = $('Webhook').first().json.body;\n\n// The scraped HTML comes back as a string in `data`\nlet html = $input.first().json.data || '';\n\n// Strip scripts, styles and HTML tags -> plain text\nlet text = html\n  .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n  .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/gi, ' ')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\n// Keep the prompt within a sane size for the model\ntext = text.slice(0, 12000);\n\nreturn [{\n  json: {\n    email: wh.email,\n    article_url: wh.article_url,\n    session_id: wh.session_id,\n    articleText: text\n  }\n}];"
+      },
+      "id": "node-clean",
+      "name": "Clean Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"contents\": [ { \"parts\": [ { \"text\": \"Summarize the following article in 3 to 5 clear sentences. Return only the summary, no preamble.\\n\\nARTICLE:\\n\" + $json.articleText } ] } ] } }}",
+        "options": {}
+      },
+      "id": "node-summary",
+      "name": "Gemini Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Gemini API (header x-goog-api-key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"contents\": [ { \"parts\": [ { \"text\": \"Extract 3 to 5 key insights from the following article. Return them as a numbered list (1., 2., 3. ...). Be concise, one insight per line.\\n\\nARTICLE:\\n\" + $('Clean Text').first().json.articleText } ] } ] } }}",
+        "options": {}
+      },
+      "id": "node-insights",
+      "name": "Gemini Insights",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Gemini API (header x-goog-api-key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "session_id",
+              "value": "={{ $('Clean Text').first().json.session_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "email",
+              "value": "={{ $('Clean Text').first().json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "article_url",
+              "value": "={{ $('Clean Text').first().json.article_url }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "summary",
+              "value": "={{ $('Gemini Summary').first().json.candidates[0].content.parts[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "insights",
+              "value": "={{ $json.candidates[0].content.parts[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-assemble",
+      "name": "Assemble",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "SELECT YOUR GOOGLE SHEET"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Session ID": "={{ $('Assemble').item.json.session_id }}",
+            "Article URL": "={{ $('Assemble').item.json.article_url }}",
+            "Summary": "={{ $('Assemble').item.json.summary }}",
+            "Insights": "={{ $('Assemble').item.json.insights }}",
+            "Email": "={{ $('Assemble').item.json.email }}",
+            "Timestamp": "={{ $('Assemble').item.json.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-sheets",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1160, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_ME",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Assemble').item.json.email }}",
+        "subject": "=Your Article Summary & Insights (Session {{ $('Assemble').item.json.session_id }})",
+        "emailType": "text",
+        "message": "=Hi,\n\nHere is the AI summary and key insights for the article you submitted.\n\nARTICLE: {{ $('Assemble').item.json.article_url }}\n\n===== SUMMARY =====\n{{ $('Assemble').item.json.summary }}\n\n===== KEY INSIGHTS =====\n{{ $('Assemble').item.json.insights }}\n\n---\nSession ID: {{ $('Assemble').item.json.session_id }}\nGenerated by AI Article Agent",
+        "options": {}
+      },
+      "id": "node-email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1380, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_ME",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"done\", \"session_id\": $('Assemble').item.json.session_id } }}",
+        "options": {}
+      },
+      "id": "node-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1600, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Scrape Article", "type": "main", "index": 0 }]]
+    },
+    "Scrape Article": {
+      "main": [[{ "node": "Clean Text", "type": "main", "index": 0 }]]
+    },
+    "Clean Text": {
+      "main": [[{ "node": "Gemini Summary", "type": "main", "index": 0 }]]
+    },
+    "Gemini Summary": {
+      "main": [[{ "node": "Gemini Insights", "type": "main", "index": 0 }]]
+    },
+    "Gemini Insights": {
+      "main": [[{ "node": "Assemble", "type": "main", "index": 0 }]]
+    },
+    "Assemble": {
+      "main": [[{ "node": "Append to Google Sheets", "type": "main", "index": 0 }]]
+    },
+    "Append to Google Sheets": {
+      "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]]
+    },
+    "Send Email": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": {}
+}
